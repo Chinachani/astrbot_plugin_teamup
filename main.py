@@ -1,33 +1,27 @@
 ﻿# -*- coding: utf-8 -*-
 import json
 import random
-from dataclasses import dataclass
+import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
-from astrbot.api import AstrBotConfig
+from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
-from astrbot.api.star import Context, Star, register
-
-
-@dataclass
-class Team:
-    name: str
-    members: List[str]
+from astrbot.api.star import Context, Star, StarTools, register
 
 
 @register(
     "astrbot_plugin_teamup",
     "Chinachani",
     "组队报名与随机分队插件",
-    "1.0.3",
+    "1.0.4",
     ""
 )
 class TeamUpPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
-        self.data_dir = self._resolve_data_dir()
+        self.data_dir = StarTools.get_data_dir("teamup")
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.state_path = self.data_dir / "state.json"
         self.state: Dict[str, Any] = {
@@ -36,14 +30,6 @@ class TeamUpPlugin(Star):
         }
         self._load_state()
 
-    def _resolve_data_dir(self) -> Path:
-        plugin_dir = Path(__file__).resolve().parent
-        if plugin_dir.parent.name.lower() == "plugins":
-            data_root = plugin_dir.parent.parent
-        else:
-            data_root = plugin_dir
-        return data_root / "plugin_data" / "teamup"
-
     def _load_state(self) -> None:
         if not self.state_path.exists():
             return
@@ -51,8 +37,9 @@ class TeamUpPlugin(Star):
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
             if isinstance(data, dict):
                 self.state.update(data)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("teamup: load state failed: %s", exc)
+            logger.error(traceback.format_exc())
 
     def _save_state(self) -> None:
         try:
@@ -60,8 +47,9 @@ class TeamUpPlugin(Star):
                 json.dumps(self.state, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.error("teamup: save state failed: %s", exc)
+            logger.error(traceback.format_exc())
 
     def _get_group_id(self, event: AstrMessageEvent) -> Optional[str]:
         msg = getattr(event, "message_obj", None)
@@ -237,6 +225,8 @@ class TeamUpPlugin(Star):
         nickname = nickname.strip()
         if not nickname:
             return event.plain_result("用法：/组队昵称 <昵称>")
+        if len(nickname) > 20:
+            return event.plain_result("昵称过长，请控制在 20 字以内。")
         uid = self._get_sender_id(event)
         self.state.setdefault("nicknames", {})[uid] = nickname
         self._save_state()
