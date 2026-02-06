@@ -1,0 +1,10 @@
+{
+  "admin_ids": {
+    "type": "list",
+    "description": "Super admin IDs",
+    "items": {
+      "type": "string"
+    },
+    "default": []
+  }
+}

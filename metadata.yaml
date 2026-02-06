@@ -1,0 +1,6 @@
+﻿name: astrbot_plugin_teamup
+display_name: 谁tm和我组队
+desc: 组队报名与随机分队插件。
+version: v1.0.4
+author: Chinachani
+repo: https://github.com/Chinachani/astrbot_plugin_teamup
